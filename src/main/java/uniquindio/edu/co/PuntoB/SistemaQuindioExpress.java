@@ -1,21 +1,23 @@
 package uniquindio.edu.co.PuntoB;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * Gestiona la jornada de trabajo de QuindíoExpress.
  *
- * Primera parte: registro de paquetes sin códigos duplicados,
- * conservando el orden de llegada, y consulta de paquetes por código.
- *
- * Estructuras utilizadas:
- * - HashMap: índice para consultar por código en O(1) promedio y
- *   detectar duplicados sin recorrer toda la colección.
- * - ArrayDeque: conserva el orden exacto en que los paquetes fueron
- *   registrados (FIFO).
+ * Partes implementadas:
+ * - Registro de paquetes sin códigos duplicados, conservando el orden
+ *   de llegada, y consulta de paquetes por código.
+ * - Municipios con al menos un paquete (sin repetidos y ordenados
+ *   alfabéticamente) y relación municipio -> paquetes.
  */
 public class SistemaQuindioExpress {
 
@@ -30,18 +32,24 @@ public class SistemaQuindioExpress {
     private final Deque<Paquete> pendientesOrdenLlegada;
 
     /**
+     * Relación municipio de destino -> paquetes destinados a ese municipio.
+     */
+    private final Map<String, List<Paquete>> indicePorMunicipio;
+
+    /**
      * Crea un sistema de gestión vacío.
      */
     public SistemaQuindioExpress() {
         this.indicePorCodigo = new HashMap<>();
         this.pendientesOrdenLlegada = new ArrayDeque<>();
+        this.indicePorMunicipio = new HashMap<>();
     }
 
     /**
      * Registra un paquete en la jornada.
      *
-     * Verifica que su código no esté previamente registrado y conserva
-     * el orden de llegada.
+     * Verifica que su código no esté previamente registrado, conserva
+     * el orden de llegada y lo asocia a su municipio de destino.
      *
      * @param paquete paquete a registrar
      * @return true si se registró; false si el código ya existía
@@ -61,6 +69,10 @@ public class SistemaQuindioExpress {
 
         indicePorCodigo.put(codigo, paquete);
         pendientesOrdenLlegada.addLast(paquete);
+        indicePorMunicipio
+                .computeIfAbsent(paquete.getDestino(),
+                        municipio -> new ArrayList<>())
+                .add(paquete);
 
         return true;
     }
@@ -108,12 +120,63 @@ public class SistemaQuindioExpress {
     }
 
     /**
+     * Devuelve los municipios que tienen al menos un paquete registrado,
+     * sin elementos repetidos (sin orden definido).
+     *
+     * @return conjunto de municipios con entregas
+     */
+    public Set<String> municipiosConPaquetes() {
+        return new HashSet<>(indicePorMunicipio.keySet());
+    }
+
+    /**
+     * Devuelve los municipios con al menos un paquete, ordenados
+     * alfabéticamente y sin elementos repetidos.
+     *
+     * @return lista de municipios ordenada alfabéticamente
+     */
+    public List<String> municipiosOrdenadosAlfabeticamente() {
+        return new ArrayList<>(
+                new TreeSet<>(indicePorMunicipio.keySet()));
+    }
+
+    /**
+     * Devuelve los paquetes destinados a un municipio específico.
+     *
+     * @param municipio municipio de destino consultado
+     * @return lista con los paquetes de ese municipio; vacía si no hay
+     * @throws IllegalArgumentException si el municipio es nulo o vacío
+     */
+    public List<Paquete> paquetesPorMunicipio(String municipio) {
+        validarMunicipio(municipio);
+
+        List<Paquete> paquetes =
+                indicePorMunicipio.get(municipio.trim());
+
+        if (paquetes == null) {
+            return new ArrayList<>();
+        }
+
+        return new ArrayList<>(paquetes);
+    }
+
+    /**
      * Comprueba que el código recibido sea válido.
      */
     private void validarCodigo(String codigo) {
         if (codigo == null || codigo.trim().isEmpty()) {
             throw new IllegalArgumentException(
                     "El código no puede ser nulo ni vacío.");
+        }
+    }
+
+    /**
+     * Comprueba que el municipio recibido sea válido.
+     */
+    private void validarMunicipio(String municipio) {
+        if (municipio == null || municipio.trim().isEmpty()) {
+            throw new IllegalArgumentException(
+                    "El municipio no puede ser nulo ni vacío.");
         }
     }
 }
