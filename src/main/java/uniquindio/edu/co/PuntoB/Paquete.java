@@ -18,7 +18,7 @@ public class Paquete implements Comparable<Paquete> {
     /**
      * Prioridad predeterminada para paquetes que no la especifiquen.
      */
-    public static final int PRIORIDAD_PREDETERMINADA = 3;
+    public static final int PRIORIDAD_PREDETERMINADA = 5;
 
     /**
      * Crea un paquete con prioridad predeterminada.
