@@ -7,17 +7,12 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.TreeSet;
 
 /**
  * Gestiona la jornada de trabajo de QuindíoExpress.
- *
- * Partes implementadas:
- * - Registro de paquetes sin códigos duplicados, conservando el orden
- *   de llegada, y consulta de paquetes por código.
- * - Municipios con al menos un paquete (sin repetidos y ordenados
- *   alfabéticamente) y relación municipio -> paquetes.
  */
 public class SistemaQuindioExpress {
 
@@ -37,12 +32,19 @@ public class SistemaQuindioExpress {
     private final Map<String, List<Paquete>> indicePorMunicipio;
 
     /**
+     * Paquetes pendientes ordenados por el criterio de despacho.
+     */
+    private final PriorityQueue<Paquete> colaDespacho;
+
+    /**
      * Crea un sistema de gestión vacío.
      */
     public SistemaQuindioExpress() {
         this.indicePorCodigo = new HashMap<>();
         this.pendientesOrdenLlegada = new ArrayDeque<>();
         this.indicePorMunicipio = new HashMap<>();
+        this.colaDespacho =
+                new PriorityQueue<>(ComparadoresPaquete.POR_DESPACHO);
     }
 
     /**
@@ -69,6 +71,7 @@ public class SistemaQuindioExpress {
 
         indicePorCodigo.put(codigo, paquete);
         pendientesOrdenLlegada.addLast(paquete);
+        colaDespacho.add(paquete);
         indicePorMunicipio
                 .computeIfAbsent(paquete.getDestino(),
                         municipio -> new ArrayList<>())
@@ -158,6 +161,67 @@ public class SistemaQuindioExpress {
         }
 
         return new ArrayList<>(paquetes);
+    }
+
+    /**
+     * Indica si no quedan paquetes pendientes por atender.
+     *
+     * @return true si no hay paquetes pendientes
+     */
+    public boolean sinPendientes() {
+        return pendientesOrdenLlegada.isEmpty();
+    }
+
+    /**
+     * Devuelve el siguiente paquete según el orden de llegada, sin
+     * retirarlo de los pendientes.
+     *
+     * @return el paquete más antiguo registrado; null si no hay
+     */
+    public Paquete siguientePorOrdenDeLlegada() {
+        return pendientesOrdenLlegada.peekFirst();
+    }
+
+    /**
+     * Atiende el siguiente paquete según el orden de llegada (FIFO),
+     * retirándolo de los pendientes.
+     *
+     * @return el paquete atendido; null si no hay pendientes
+     */
+    public Paquete atenderPorOrdenDeLlegada() {
+        Paquete paquete = pendientesOrdenLlegada.pollFirst();
+
+        if (paquete != null) {
+            colaDespacho.remove(paquete);
+        }
+
+        return paquete;
+    }
+
+    /**
+     * Devuelve el siguiente paquete a despachar según las reglas de
+     * prioridad, sin retirarlo de los pendientes.
+     *
+     * @return el paquete de mayor prioridad; null si no hay pendientes
+     */
+    public Paquete siguientePrioritario() {
+        return colaDespacho.peek();
+    }
+
+    /**
+     * Despacha el siguiente paquete según las reglas de prioridad,
+     * retirándolo de los pendientes.
+     *
+     * @return el paquete despachado; null si no hay pendientes
+     */
+    public Paquete despacharPrioritario() {
+        Paquete paquete = colaDespacho.poll();
+
+        if (paquete != null) {
+            pendientesOrdenLlegada.remove(paquete);
+        }
+
+        return paquete;
     }
 
     /**
